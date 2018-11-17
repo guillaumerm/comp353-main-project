@@ -1,0 +1,47 @@
+template queries for final project DB:
+
+1.
+UPDATE  account  
+INNER join charge_plane on account.charge_plane_no = charge_plan.charge_plan_no
+set account.balance -= charge_plane.charge
+
+//need to imp when client exceeds the number of transactions and charged another amount
+
+
+2.
+
+//schedule
+select date
+from employee
+INNER JOIN schedule on schedule.employee.id = employee.employee.id
+
+//payroll sickdays, deduct salary using number of unpaid leaves
+select sum(date)
+from employee
+INNER JOIN schedule on schedule.employee.id = employee.employee.id
+
+//holiday
+select sum(holiday_id)
+from holiday
+where province = 'example_province'
+
+
+
+//Calculation of the annual profits and losses of the Bank------------------
+
+
+//for one month
+select sum(amount) 
+from transaction
+where DATEDIFF(date1, date2)
+
+//interest due for current
+
+select sum(amount)*1.interest
+from transactions
+where date > datediff(end of billing date, '2 months')
+account = credit card;		
+
+
+
+mul by customer amount + the 

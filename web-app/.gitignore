@@ -4,3 +4,4 @@ Homestead.json
 Homestead.yaml
 .env
 /storage/framework/sessions
+.DS_STORE
