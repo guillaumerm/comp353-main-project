@@ -11,6 +11,30 @@
 |
 */
 
-$router->get('/', function () use ($router) {
-    return $router->app->version();
-});
+$router->get('/', [
+    'as' => 'home', 'uses' => 'ClientController@show'
+]);
+
+$router->get('/client/{id}/info', [
+    'as' => 'client-info', 'uses' => 'ClientController@info'
+]);
+
+$router->get('/client/{id}/accounts', [
+    'as' => 'client-accounts', 'uses' => 'ClientController@accounts'
+]);
+
+$router->get('/client/logout', [
+    'as' => 'client-logout', 'uses' => 'ClientController@logout'
+]);
+
+$router->post('/client/login', [
+    'as' => 'client-login', 'uses' => 'ClientController@login'
+]);
+
+$router->get('/client/logout', [
+    'as' => 'client-logout', 'uses' => 'ClientController@logout'
+]);
+
+$router->post('/client/register', [
+    'as' => 'client-register', 'uses' => 'ClientController@register'
+]);
