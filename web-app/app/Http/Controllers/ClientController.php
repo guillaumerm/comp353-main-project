@@ -197,6 +197,129 @@ class ClientController extends Controller
         return response()->json(\DB::select("SELECT * FROM `account` JOIN `account_type` ON `account_type`.`account_type_id` = `account`.`account_type_id` JOIN `account_option` ON `account`.`account_option_id` = `account_option`.`account_option_id` JOIN `charge_plan` ON `charge_plan`.`charge_plan_no` = `account`.`charge_plan_no` WHERE `account`.`client_id` = :id", [ 'id' => $id]));
     }
 
+    public function account(Request $request, $account_no) {
+        $result = \DB::select("SELECT * FROM `account` JOIN `account_type` ON `account_type`.`account_type_id` = `account`.`account_type_id` JOIN `account_option` ON `account`.`account_option_id` = `account_option`.`account_option_id` JOIN `charge_plan` ON `account`.`charge_plan_no` = `charge_plan`.`charge_plan_no` AND `charge_plan`.`account_option_id` = `account`.`account_option_id` WHERE `account`.`account_no` = :account_no AND `account`.`client_id` = :client_id", ['account_no' => $account_no, 'client_id' => $request->session()->get('client_id')]);
+
+        if (!$result) {
+            return response()->json(NULL, 404);
+        } else {
+            $result[0]['transactions'] = \DB::select("SELECT * FROM `transaction` WHERE `transaction`.`account_no` = :account_no AND `transaction`.`date` >= DATE_SUB(NOW(),INTERVAL 10 YEAR)", ['account_no' => $result[0]['account_no']]);
+            return response()->json($result, 200);
+        }
+    }
+
+    public function payees(Request $request, $id) {
+        if(!$request->session()->has('client_id') && !$request->session()->has('employee_id')) {
+            return response()->json(NULL,400);
+        }
+
+        if($request->session()->has('client_id') && $request->session()->get('client_id') != $id) {
+            return response()->json(['error' => ['message' => 'Not allowed']], 400);
+        }
+
+        return response()->json(\DB::select("SELECT * FROM `payee` WHERE `payee`.`client_id` = ?", [ 'id' => $id]));
+    }
+
+    public function getPayee(Request $request, $id) {
+        $result = \DB::select("SELECT * FROM `payee` WHERE `payee`.`payee_id` = :payee_id AND `payee`.`client_id` = :client_id", ['payee_id' => $id, 'client_id' => $request->session()->get('client_id')]);
+        if (!$result) {
+            return response()->json(NULL, 404);
+        } else {
+            return response()->json($result[0], 200);
+        }
+    }
+
+    public function addPayee(Request $request) {
+        $errors = array();
+        $payee = array();
+        if(!$request->input('name')) {
+            $errors[] = ['message' => 'Name of the payee is required'];
+        } else {
+            $payee ['name'] = $request->input('name'); 
+        }
+
+        if($request->input('account_no')) {
+            $errors[] = ['message' => 'Account no of payee is required'];
+        } else {
+            $payee ['account_no'] = $request->input('account_no');
+        }
+    }
+
+    public function updatePayee(Request $request, $id) {
+        $payee = [ 'payee_id' => $id ];
+
+        $payee['name'] = $request->input('name');
+        $payee['account_no'] = $request->input('account_no');
+
+        $result = \DB::update("UPDATE `payee` SET `payee`.`name` = :name AND `payee`.`account_no` = :account_no", $payee);
+
+        if(!$result) {
+            return response()->json(NULL, 400);
+        } else {
+            return response()->json(NULL, 200);
+        }
+    }
+
+    public function deletePayee(Request $request, $id) {
+        $errors = array();
+        $result = \DB::delete("DELETE FROM `payee` WHERE `payee`.`client_id` = :client_id AND `payee`.`payee_id` = :payee_id", ['client_id' => $request->session()->get("client_id"), 'payee_id' => $id]);
+    
+        if(!$result) {
+            return response()->json(NULL, 400);
+        } else {
+            return response()->json(NULL, 200);
+        }
+    }
+
+    public function transferBetweenAccounts(Request $request) {
+        $errors = array();
+        $transfer = array();
+
+        if(!$request->input('from_account_no')) {
+            $errors[] = ['message' => 'Originating account number is required (from_account_no)'];
+        } else {
+            $transfer['from_account_no'] = $request->input('from_account_no');
+        }
+
+        if(!$request->input('to_account_no')) {
+            $errors[] = ['message' => 'Desitnation account number is required (to_account_no)'];
+        } else {
+            $transfer['to_account_no'] = $request->input('to_account_no');
+        }
+        
+        if(!$request->input('amount')){
+            $errors[] = ['message' => 'Amount is required (amount)'];
+        } else {
+            $transfer['amount'] = $request->input('amount');
+        }
+
+        $transfer['client_id'] = $request->session()->get('client_id');
+
+        try{
+            \DB::transaction(function () use ($transfer) {
+                $result = \DB::update("UPDATE `account` SET `account`.`amount` - :amount WHERE `account`.`account_no` = :to_account_no AND `account`.`client_id` = :client_id", $transfer);
+
+                $result = \DB::insert("INSERT INTO `transaction` (`account_no`, `amount`) VALUES (:account_no, (-1)*:account)", $transfer);
+
+                if (!$result) {
+                    throw new Execption();
+                }
+
+                $result = \DB::update("UPDATE `account` SET `account`.`amount` + :amount WHERE `account`.`account_no` = :to_account_no AND `account`.`client_id` = :client_id", $transfer);
+
+                $result = \DB::insert("INSERT INTO `transaction` (`account_no`, `amount`) VALUES (:account_no, :account)", $transfer);
+
+                if (!$result) {
+                    throw new Exeception();
+                }
+            });
+
+            return response()->json(NULL,200);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Error while making the transfer'], 400);
+        }
+    }
+
     public function delete(){
 
     }

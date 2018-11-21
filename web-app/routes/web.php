@@ -38,3 +38,23 @@ $router->get('/client/logout', [
 $router->post('/client/register', [
     'as' => 'client-register', 'uses' => 'ClientController@register'
 ]);
+
+$router->get('/client/payees', [
+    'as' => 'client-payees', 'uses' => 'ClientController@getPayees'
+]);
+
+$router->get('/client/payee/{id}' , [
+    'as' => 'client-get-payee', 'uses' => 'ClientController@getPayee'
+]);
+
+$router->post('/client/payee', [
+    'as' => 'client-add-payee', 'uses' => 'ClientController@addPayee'
+]);
+
+$router->delete('/client/payee/{id}', [
+    'as' => 'client-delete-payee', 'uses' => 'ClientController@deletePayee'
+]);
+
+$router->update('/client/payee/{id}', [
+    'as' => 'client-update-payee', 'uses' => 'ClientController@updatePayee'
+]);
