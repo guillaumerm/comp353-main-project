@@ -55,6 +55,14 @@ $router->delete('/client/payee/{id}', [
     'as' => 'client-delete-payee', 'uses' => 'ClientController@deletePayee'
 ]);
 
-$router->update('/client/payee/{id}', [
+$router->patch('/client/payee/{id}', [
     'as' => 'client-update-payee', 'uses' => 'ClientController@updatePayee'
+]);
+
+$router->get('/branches', [
+    'as' => 'branch-list', 'uses' => 'BranchController@getBranches'
+]);
+
+$router->post('/branch', [
+    'as' => 'branch-post', 'uses' => 'BranchController@addBranch'
 ]);
