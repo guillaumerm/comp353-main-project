@@ -271,7 +271,7 @@ class ClientController extends Controller
         try{
             \DB::transaction(function () use ($account) {
                 
-                $result = \DB::insert("INSERT INTO `account` (`client_id`, `account_type_id`, `account_option_id`, `charge_plan_no`) VALUES (:client_id, :account_type_id, :account_option_id, :charge_plan_no)", $account);
+                $result = \DB::insert("INSERT INTO `account` (`client_id`, `account_type_id`, `account_option_id`, `charge_plan_no`) VALUES (?, ?, ?, ?)", [$account['client_id'], $account['account_type_id'], $account['account_option_id'], $account['charge_plan_no']]);
                 
                 if(!$result) {
                     throw new Exception();
@@ -279,7 +279,7 @@ class ClientController extends Controller
 
                 $account['account_no'] = \DB::getPdo()->lastInsertId();
                 
-                \DB::insert("INSERT INTO `branchAcc` (`account_no`, `branch_id`, `service_id`) VALUES (:account_no, :branch_id, :service_id)", $account);
+                \DB::insert("INSERT INTO `branchAcc` (`account_no`, `branch_id`, `service_id`) VALUES (?, ?, ?)", [$account['account_no'], $account['branch_id'], $account['service_id']]);
                 
                 if(!$result) {
                     throw new Exception();
