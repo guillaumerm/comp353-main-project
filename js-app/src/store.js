@@ -7,21 +7,42 @@ Vue.use(Vuex)
 export default new Vuex.Store({
   state: {
     loggedIn: false,
-    accounts: null
+    employeeLoggedIn: false,
+    accounts: null,
+    awaitingFunds: null
   },
   getters: {
     loggedIn: state => state.loggedIn,
-    accounts: state => state.accounts
+    accounts: state => state.accounts,
+    awaitingFunds: state => state.awaitingFunds
   },
   mutations: {
     setLoggedIn(state, loggedIn){
       state.loggedIn = loggedIn
     },
+    setEmployeeLoggedIn(state, loggedIn){
+      state.employeeLoggedIn = loggedIn
+    },
     setAccounts(state, accounts){
       state.accounts = accounts
+    },
+    setAwaitingFunds(state, awaitingFunds) {
+      state.awaitingFunds = awaitingFunds
     }
   },
   actions: {
+    fetchAwaitingFunds() {
+      ClientService.clientAwaitingFunds().then(
+        (response) => {
+          this.commit('setAwaitingFunds', response.data)
+        }
+      ).catch(
+        (error) => {
+          this.commit('setAwaitingFunds', null)
+          console.log(error)
+        }
+      )
+    },
     fetchAccounts() {
       ClientService.clientAccounts().then(
         (response) => {
@@ -36,7 +57,9 @@ export default new Vuex.Store({
     },
     login() {
       this.commit('setLoggedIn', true)
-      this.dispatch('fetchAccounts')
+    },
+    login() {
+      this.commit('setEmployeeLoggedIn', true)
     },
     logout() {
       this.commit('setLoggedIn', false)

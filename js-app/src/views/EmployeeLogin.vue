@@ -40,9 +40,9 @@ export default {
     },
     methods: {
         submit(){
-          AuthService.clientLogin({identity: this.identity, password: this.password}).then(
+          AuthService.employeeLogin({identity: this.identity, password: this.password}).then(
             (response) => {
-              this.$store.dispatch('login');
+              this.$store.dispatch('loginEmployee');
             }
           ).catch(
             (error) => {

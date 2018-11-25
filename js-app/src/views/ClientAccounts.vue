@@ -27,13 +27,19 @@
                                     <v-container grid-list-md>
                                     <v-layout wrap>
                                         <v-flex xs12 sm6 md4>
-                                        <v-text-field v-model="new_account.account_option_id" label="Account Option"></v-text-field>
+                                            <v-select v-model="new_account.account_type_id" label="Account Type" :loading="!account_types" @change="fetchAccountOptions()" :items="account_types" item-text="type" item-value="account_type_id"></v-select>
                                         </v-flex>
                                         <v-flex xs12 sm6 md4>
-                                        <v-text-field v-model="new_account.account_type_id" label="Account Type"></v-text-field>
+                                            <v-select v-model="new_account.account_option_id" label="Account Option" :loading="!account_options" @change="fetchChargePlans()" :items="account_options" item-text="description" item-value="account_option_id"></v-select>
                                         </v-flex>
                                         <v-flex xs12 sm6 md4>
-                                        <v-text-field v-model="new_account.charge_plan_no" label="Charge Plan"></v-text-field>
+                                            <v-select v-model="new_account.charge_plan_no" label="Charge Plan" :loading="!charge_plans" :items="charge_plans" item-text="description" item-value="charge_plan_no"></v-select>
+                                        </v-flex>
+                                        <v-flex xs12 sm6 md4>
+                                            <v-select v-model="new_account.service_id" label="Service Type" :loading="!services" :items="services" item-text="description" item-value="service_id"></v-select>
+                                        </v-flex>
+                                        <v-flex xs12 sm6 md4>
+                                            <v-select v-model="new_account.branch_id" label="Account Location" :loading="!branches" :items="branches" :item-text="function(item){ return item.street+', ' + item.city +', ' + item.province}" item-value="branch_id"></v-select>
                                         </v-flex>
                                     </v-layout>
                                     </v-container>
@@ -41,7 +47,7 @@
 
                                 <v-card-actions>
                                     <v-spacer></v-spacer>
-                                    <v-btn color="blue darken-1" flat @click="close">Cancel</v-btn>
+                                    <v-btn color="blue darken-1" flat @click="dialog = !dialog">Cancel</v-btn>
                                     <v-btn color="blue darken-1" flat @click="save">Save</v-btn>
                                 </v-card-actions>
                                 </v-card>
@@ -85,6 +91,7 @@
                                             Delete Account
                                         </span>
                                     </v-tooltip>
+                                    </td>
                                 </template>
                                 <template slot="no-data">
                                     <v-alert :value="true" color="error" icon="warning">
@@ -128,11 +135,19 @@ export default {
     data: () => {
         return {
             selected_account: null,
+            dialog: false,
             showTransactions: false,
+            account_types: null,
+            account_options: null,
+            charge_plans: null,
+            branches: null,
+            services: null,
             new_account: {
                 account_type_id: null,
                 account_option_id: null,
-                charge_plan_no: null
+                charge_plan_no: null,
+                service_id: null,
+                branch_id: null
             },
             headers: [
                 {
@@ -161,6 +176,35 @@ export default {
     },
     created() {
         this.$store.dispatch('fetchAccounts')
+        ClientService.clientGetAccountTypes().then(
+            (response) => {
+                this.account_types = response.data
+            }
+        ).catch(
+            (error) => {
+                console.error(error)
+            }
+        )
+
+        ClientService.clientGetBranches().then(
+            (response) => {
+                this.branches = response.data
+            }
+        ).catch(
+            (error) => {
+                console.error(error)
+            }
+        )
+
+        ClientService.clientGetServices().then(
+            (response) => {
+                this.services = response.data
+            }
+        ).catch(
+            (error) => {
+                console.error(error)
+            }
+        )
     },
     computed: {
         accounts() {
@@ -171,6 +215,39 @@ export default {
         selectAccount(account) {
             this.selected_account = account
             this.showTransactions = true
+        },
+        fetchAccountOptions() {
+            ClientService.clientGetAccountOptions(this.new_account.account_type_id).then(
+                (response) => {
+                    this.account_options = response.data
+                }
+            ).catch(
+                (error) => {
+                    console.error(error)
+                }
+            )
+        },
+        fetchChargePlans() {
+            ClientService.clientGetChargePlans(this.new_account.account_option_id).then(
+                (response) => {
+                    this.charge_plans = response.data
+                }
+            ).catch(
+                (error) => {
+                    console.error(error)
+                }
+            )
+        },
+        save(){
+            ClientService.clientAddAccount(this.new_account).then(
+                (response) => {
+                    this.$store.dispatch('fetchAccounts')
+                }
+            ).catch(
+                (error) => {
+                    console.error(error)
+                }
+            )
         }
     }
 }

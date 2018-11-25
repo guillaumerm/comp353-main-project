@@ -24,6 +24,10 @@
           <v-icon>attach_money</v-icon>
           Send money
         </v-btn>
+        <v-btn flat :to="{name: 'client-make-payment'}">
+          <v-icon>contact_mail</v-icon>
+          Make payment
+        </v-btn>
         <v-btn flat :to="{name: 'client-transfer-money'}">
           <v-icon>transform</v-icon>
           Transfer money

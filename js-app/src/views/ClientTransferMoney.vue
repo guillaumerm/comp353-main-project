@@ -5,10 +5,13 @@
                 <v-flex xs12 sm8 md4>
                     <v-card class="elevation-12">
                     <v-toolbar dark color="primary">
-                        <v-toolbar-title>Send Money Fast</v-toolbar-title>
+                        <v-toolbar-title>Transfer Fast</v-toolbar-title>
                     </v-toolbar>
                     <v-card-text v-if="!success">
-                        <v-alert type="danager" v-if="error">
+                        <v-alert
+                        :value="error"
+                        type="error"
+                        >
                             {{error}}
                         </v-alert>
                         <v-form>
@@ -18,13 +21,16 @@
                         </v-form>
                     </v-card-text>
                     <v-card-text v-else>
-                        <v-alert type="success">
-                            Your transfer is being processed!
+                        <v-alert
+                        :value="true"
+                        type="success"
+                        >
+                            Your transfer has being process.
                         </v-alert>
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer></v-spacer>
-                        <v-btn color="primary" v-on:click="submit()">Send Money</v-btn>
+                        <v-btn color="primary" v-on:click="submit()">Transfer Money</v-btn>
                     </v-card-actions>
                     </v-card>
                 </v-flex>

@@ -9,5 +9,29 @@ export default {
   },
   clientAccounts (payload) {
       return Api().get('/client/accounts')
+  },
+  clientAwaitingFunds () {
+    return Api().get('/client/awaitingFunds')
+  },
+  clientReceiveFunds(payload) {
+    return Api().post('/client/receiveFunds', payload)
+  },
+  clientGetAccountTypes(){
+    return Api().get('/account/types');
+  },
+  clientGetAccountOptions(accountTypeId) {
+    return Api().get('/account/type/' + accountTypeId + '/options');
+  },
+  clientGetChargePlans(accountOptionId) {
+    return Api().get('/account/option/' + accountOptionId + '/chargeplans');
+  },
+  clientAddAccount(payload) {
+    return Api().post('/client/account', payload);
+  },
+  clientGetBranches() {
+    return Api().get('/branches');
+  },
+  clientGetServices() {
+    return Api().get('/services');
   }
 }

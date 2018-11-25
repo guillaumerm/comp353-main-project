@@ -7,6 +7,7 @@ import ClientRegister from './views/ClientRegister.vue'
 import ClientAccounts from './views/ClientAccounts.vue'
 import ClientSendMoney from './views/ClientSendMoney.vue'
 import ClientTransferMoney from './views/ClientTransferMoney.vue'
+import EmployeeInfo from './views/EmployeeInfo.vue'
 import store from './store'
 
 Vue.use(Router)
@@ -14,6 +15,14 @@ Vue.use(Router)
 function requireClientAuth (to, from, next) {
   if (!store.getters.loggedIn) {
     next('/client/login')
+  } else {
+    next();
+  }
+}
+
+function requireEmployeeAuth(to, from, next) {
+  if (!store.getters.employeeLogin) {
+    next('/employee/login');
   } else {
     next();
   }
@@ -65,6 +74,12 @@ export default new Router({
       name: 'employee-login',
       component: EmployeeLgoin,
       beforeEnter: noAuthAllowed
+    },
+    {
+      path: '/employee/info',
+      name: 'employee-info',
+      component: EmployeeInfo,
+      beforeEnter: requireEmployeeAuth
     },
     {
       path: '/client/accounts',
