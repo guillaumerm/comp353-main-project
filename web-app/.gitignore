@@ -5,3 +5,4 @@ Homestead.yaml
 .env
 /storage/framework/sessions
 .DS_STORE
+/node_modules/

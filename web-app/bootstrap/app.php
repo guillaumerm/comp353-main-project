@@ -26,6 +26,8 @@ $app = new Laravel\Lumen\Application(
 $app->withFacades();
 
 $app->configure('session');
+
+$app->configure('cors');
 // $app->withEloquent();
 
 /*
@@ -68,6 +70,7 @@ $app->bind(
 $app->middleware([
 //     App\Http\Middleware\ExampleMiddleware::class
     \Illuminate\Session\Middleware\StartSession::class,
+ //   \Barryvdh\Cors\HandleCors::class
 ]);
 
 // $app->routeMiddleware([
@@ -84,6 +87,7 @@ $app->middleware([
 | totally optional, so you are not required to uncomment this line.
 |
 */
+// $app->register(Barryvdh\Cors\ServiceProvider::class);
 $app->register(\Illuminate\Session\SessionServiceProvider::class);
 // $app->register(App\Providers\AppServiceProvider::class);
 // $app->register(App\Providers\AuthServiceProvider::class);

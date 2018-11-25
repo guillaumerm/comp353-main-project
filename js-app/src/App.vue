@@ -2,20 +2,11 @@
   <v-app id="app">
     <v-toolbar app>
       <v-toolbar-title class="headline text-uppercase">
-        <span>Vuetify</span>
-        <span class="font-weight-light">MATERIAL DESIGN</span>
+        <span>DATA</span>
+        <span class="font-weight-light">BANK</span>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <template v-if="!loggedIn">
-      <v-btn :to="{name: 'client-login'}">
-        Login
-      </v-btn>
-      OR
-      <v-btn color="primary" :to="{name: 'client-register' }">
-        Rgister
-      </v-btn>
-      </template>
-      <template v-else>
+      <template v-if="loggedIn">
         <v-btn flat :to="{name: 'client-accounts'}">
           <v-icon>account_balance</v-icon>
           Accounts
@@ -24,7 +15,7 @@
           <v-icon>attach_money</v-icon>
           Send money
         </v-btn>
-        <v-btn flat :to="{name: 'client-make-payment'}">
+        <v-btn flat :to="{name: 'client-make-payments'}">
           <v-icon>contact_mail</v-icon>
           Make payment
         </v-btn>
@@ -35,6 +26,23 @@
         <v-btn flat v-on:click="logout()">
           Logout
         </v-btn>
+      </template>
+      <template v-else-if="employeeLoggedIn">
+        <v-btn flat :to="{name: 'employee-info'}">
+          Employee Info
+        </v-btn>
+        <v-btn flat v-on:click="logout()">
+          Logout
+        </v-btn>
+      </template>
+      <template v-else>
+         <v-btn :to="{name: 'client-login'}">
+            Login
+          </v-btn>
+          OR
+          <v-btn color="primary" :to="{name: 'client-register' }">
+            Rgister
+          </v-btn>
       </template>
     </v-toolbar>
 
@@ -57,6 +65,9 @@ export default {
   computed: {
     loggedIn(){
       return this.$store.getters.loggedIn;
+    },
+    employeeLoggedIn(){
+      return this.$store.getters.employeeLoggedIn
     }
   },
   methods: {

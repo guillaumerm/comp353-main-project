@@ -14,6 +14,6 @@ export default {
     return Api().post('/client/sendfund', payload)
   },
   employeeLogin (payload) {
-    return Api().get('/employee/login', payload)
+    return Api().post('/employee/login', payload)
   }
 }

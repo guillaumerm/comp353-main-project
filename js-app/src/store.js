@@ -14,7 +14,8 @@ export default new Vuex.Store({
   getters: {
     loggedIn: state => state.loggedIn,
     accounts: state => state.accounts,
-    awaitingFunds: state => state.awaitingFunds
+    awaitingFunds: state => state.awaitingFunds,
+    employeeLoggedIn: state => state.employeeLoggedIn
   },
   mutations: {
     setLoggedIn(state, loggedIn){
@@ -58,11 +59,12 @@ export default new Vuex.Store({
     login() {
       this.commit('setLoggedIn', true)
     },
-    login() {
+    employeeLogin() {
       this.commit('setEmployeeLoggedIn', true)
     },
     logout() {
       this.commit('setLoggedIn', false)
+      this.commit('setEmployeeLoggedIn', false)
       this.commit('setAccounts', null)
     }
   }

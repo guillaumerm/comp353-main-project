@@ -28,6 +28,15 @@ export default {
   clientAddAccount(payload) {
     return Api().post('/client/account', payload);
   },
+  clientGetPayees() {
+    return Api().get('/client/payees')
+  },
+  clientAddPayee(payload) {
+    return Api().post('/client/payee', payload)
+  },
+  clientMakePayment(payload) {
+    return Api().post('/client/payment', payload)
+  },
   clientGetBranches() {
     return Api().get('/branches');
   },

@@ -7,6 +7,7 @@ import ClientRegister from './views/ClientRegister.vue'
 import ClientAccounts from './views/ClientAccounts.vue'
 import ClientSendMoney from './views/ClientSendMoney.vue'
 import ClientTransferMoney from './views/ClientTransferMoney.vue'
+import ClientMakePayments from './views/ClientMakePayment.vue'
 import EmployeeInfo from './views/EmployeeInfo.vue'
 import store from './store'
 
@@ -21,7 +22,7 @@ function requireClientAuth (to, from, next) {
 }
 
 function requireEmployeeAuth(to, from, next) {
-  if (!store.getters.employeeLogin) {
+  if (!store.getters.employeeLoggedIn) {
     next('/employee/login');
   } else {
     next();
@@ -29,7 +30,7 @@ function requireEmployeeAuth(to, from, next) {
 }
 
 function noAuthAllowed (to, from, next) {
-  if(store.getters.loggedIn) {
+  if(store.getters.loggedIn || store.getters.employeeLoggedIn) {
     next('/')
   } else {
     next();
@@ -85,6 +86,12 @@ export default new Router({
       path: '/client/accounts',
       name: 'client-accounts',
       component: ClientAccounts,
+      beforeEnter: requireClientAuth
+    },
+    {
+      path: '/client/makepayments',
+      name: 'client-make-payments',
+      component: ClientMakePayments,
       beforeEnter: requireClientAuth
     }
   ]

@@ -42,7 +42,8 @@ export default {
         submit(){
           AuthService.employeeLogin({identity: this.identity, password: this.password}).then(
             (response) => {
-              this.$store.dispatch('loginEmployee');
+              this.$store.dispatch('employeeLogin');
+              this.$router.push({ name: 'employee-info'})
             }
           ).catch(
             (error) => {

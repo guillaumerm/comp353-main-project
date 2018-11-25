@@ -17,19 +17,52 @@ class ClientController extends Controller
     }
 
     public function login(Request $request) {
-        if(!$request->input('email') || !$request->input('password')){
+        if(!$request->input('identity') || !$request->input('password')){
             return response()->json(['error' => ['message' => 'Missing content in your body request']], 400);
         }
 
-        $result = \DB::select("SELECT client_id, password FROM `client` WHERE `client`.`email` = \"" . $request->input("email") . "\"");
-        
-        if (count($result) > 1 || !\password_verify($request->input("password"), $result[0]->password)){
+        $result = \DB::select("SELECT client_id, password FROM `client` WHERE `client`.`email` = \"" . $request->input("identity") . "\"");
+        if(empty($result)){
+            return response()->json(NULL, 400);
+        }
+
+        if (!\password_verify($request->input("password"), $result[0]->password)){
             return response()->json(['error' => ['message' => 'Incorrect login credentials']], 400);
         } else {
             $request->session()->put('client_id', $result[0]->client_id);
             $request->session()->put('is_employee', false);
             return response()->json(NULL, 200);
         }
+    }
+
+    public function getChargePlans(Request $request, $accountOptionId) {
+        if(!$request->session()->has('client_id')){
+            return response()->json(['error' => 'Authentication is required'], 400);
+        }
+
+        $result = \DB::select("SELECT * FROM charge_plan WHERE option_id = ?", [$accountOptionId]);
+
+        return response()->json($result, 200);
+    }
+
+    public function getAccountOptions(Request $request, $accountTypeId) {
+        if(!$request->session()->has('client_id')) {
+            return response()->json(['error' => 'Authentication is required'], 400);
+        }
+
+        $result = \DB::select("SELECT * FROM account_option WHERE account_type_id = ?", [$accountTypeId]);
+
+        return response()->json($result, 200);
+    } 
+
+    public function getAccountTypes(Request $request) {
+        if(!$request->session()->has('client_id')) {
+            return response()->json(['error' => 'Authentication is required'], 400);
+        }
+
+        $result = \DB::select("SELECT * FROM account_type");
+
+        return response()->json($result, 200);
     }
 
     /**
@@ -39,7 +72,7 @@ class ClientController extends Controller
      * @return Response 
      */
     public function logout(Request $request) {
-        if (!$request->session()->has('client_id')) {
+        if (!$request->session()->has('client_id') && !$request->session()->has('employee_id')) {
             return response()->json(NULL, 404);
         }
 
@@ -115,6 +148,8 @@ class ClientController extends Controller
 
         if($request->input('apt')) {
             $client_address['apt'] = $request->input('apt');
+        } else {
+            $client_address['apt'] = NULL;
         }
 
         if(!$request->input('city')) {
@@ -142,21 +177,20 @@ class ClientController extends Controller
         }
 
         try{
-            \DB::transaction(function () use ($client, $client_address) {
+            \DB::transaction(function () use ($client, $client_address, $request) {
                 \DB::insert("INSERT INTO `address` (street, apt, city, postal_code, province) VALUES (:street, :apt, :city, :postal_code, :province)", $client_address);
 
                 $client['address_id'] = \DB::getPdo()->lastInsertId();
 
+                // Automatically login the user once he/she created
+                $request->session()->put('client_id', \DB::getPdo()->lastInsertId());
+
                 \DB::insert("INSERT INTO `client` (first_name, last_name, gender, phone_number, dob, email, client_category_id, address_id, password, joining_date) VALUES (:first_name, :last_name, :gender, :phone_number, :dob, :email, :client_category_id, :address_id, :password, :joining_date)", $client);
             });
-                            
-            // Automatically login the user once he/she created
-            app('session')->put('client_id', \DB::getPdo()->lastInsertId());
-
-            return response()->json(NULL,200);
         } catch (Exception $e) {
             return response()->json(['error' => 'Error while creating the account'], 400);
         }
+        
 
         return response()->json(NULL, 200);
     }
@@ -185,27 +219,19 @@ class ClientController extends Controller
      * @param Request $request
      * @return Response
      */
-    public function accounts(Request $request, $id){
-        if(!$request->session()->has('client_id') && !$request->session()->has('employee_id')) {
+    public function accounts(Request $request){
+        if(!$request->session()->has('client_id')) {
             return response()->json(NULL,400);
         }
 
-        if($request->session()->has('client_id') && $request->session()->get('client_id') != $id) {
-            return response()->json(['error' => ['message' => 'Not allowed']], 400);
-        }
+        $accounts = \DB::select("SELECT * FROM `account` NATURAL JOIN `account_type` NATURAL JOIN `account_option` JOIN `charge_plan` ON `charge_plan`.`charge_plan_no` = `account`.`charge_plan_no` AND `charge_plan`.`option_id` = `account`.`account_option_id` WHERE `account`.`client_id` = :id", [ 'id' => $request->session()->get('client_id')]);
 
-        return response()->json(\DB::select("SELECT * FROM `account` NATURAL JOIN `account_type` NATURAL JOIN `account_option` NATURAL JOIN `charge_plan` WHERE `account`.`client_id` = :id", [ 'id' => $id]));
-    }
-
-    public function getAccount(Request $request, $account_no) {
-        $result = \DB::select("SELECT * FROM `account` NATURAL JOIN `account_type` NATURAL JOIN `account_option` NATURAL JOIN `charge_plan` WHERE `account`.`account_no` = :account_no AND `account`.`client_id` = :client_id", ['account_no' => $account_no, 'client_id' => $request->session()->get('client_id')]);
-
-        if (!$result) {
-            return response()->json(NULL, 404);
-        } else {
-            $result[0]['transactions'] = \DB::select("SELECT * FROM `transaction` WHERE `transaction`.`account_no` = :account_no AND `transaction`.`date` >= DATE_SUB(NOW(),INTERVAL 10 YEAR)", ['account_no' => $result[0]['account_no']]);
-            return response()->json($result, 200);
-        }
+        if ($accounts) {
+            foreach($accounts as $account) {
+                $account->transactions = \DB::select("SELECT * FROM `transaction` WHERE `transaction`.`account_no` = :account_no AND `transaction`.`date` >= DATE_SUB(NOW(),INTERVAL 10 YEAR)", ['account_no' => $account->account_no]);
+            }
+        } 
+        return response()->json($accounts);
     }
 
     public function createAccount(Request $request) {
@@ -241,10 +267,11 @@ class ClientController extends Controller
         } else {
             $account['service_id'] = $request->input('service_id');
         }
+
         try{
             \DB::transaction(function () use ($account) {
                 
-                $result = \DB::insert("INSERT INTO `account` (`client_id`, `account_type_id`, `account_option_id`, `charge_plan_no`) VALUES (:client_id, :account_type_id, :account_option_id, :chard_plan_no)", $account);
+                $result = \DB::insert("INSERT INTO `account` (`client_id`, `account_type_id`, `account_option_id`, `charge_plan_no`) VALUES (:client_id, :account_type_id, :account_option_id, :charge_plan_no)", $account);
                 
                 if(!$result) {
                     throw new Exception();
@@ -265,25 +292,12 @@ class ClientController extends Controller
         return response()->json(NULL,200);
     }
 
-    public function payees(Request $request, $id) {
-        if(!$request->session()->has('client_id') && !$request->session()->has('employee_id')) {
+    public function getPayees(Request $request) {
+        if(!$request->session()->has('client_id')) {
             return response()->json(NULL,400);
         }
 
-        if($request->session()->has('client_id') && $request->session()->get('client_id') != $id) {
-            return response()->json(['error' => ['message' => 'Not allowed']], 400);
-        }
-
-        return response()->json(\DB::select("SELECT * FROM `payee` WHERE `payee`.`client_id` = ?", [ 'id' => $id]));
-    }
-
-    public function getPayee(Request $request, $id) {
-        $result = \DB::select("SELECT * FROM `payee` WHERE `payee`.`payee_id` = :payee_id AND `payee`.`client_id` = :client_id", ['payee_id' => $id, 'client_id' => $request->session()->get('client_id')]);
-        if (!$result) {
-            return response()->json(NULL, 404);
-        } else {
-            return response()->json($result[0], 200);
-        }
+        return response()->json(\DB::select("SELECT * FROM `payee` WHERE `payee`.`client_id` = ?", [ $request->session()->get('client_id') ]));
     }
 
     public function addPayee(Request $request) {
@@ -299,6 +313,14 @@ class ClientController extends Controller
             $errors[] = ['message' => 'Account no of payee is required'];
         } else {
             $payee ['account_no'] = $request->input('account_no');
+        }
+
+        $result = \DB::insert("INSERT INTO payee (name, account_no, client_id) VALUES (?, ?, ?)", [$request->input('name'), $request->input('account_no'), $request->session()->get('client_id')]);
+
+        if(!$result) {
+            return response()->json(NULL, 400);
+        } else {
+            return response()->json(NULL, 200);
         }
     }
 
@@ -329,77 +351,82 @@ class ClientController extends Controller
     }
 
     public function makePayment(Request $request) {
-        $payment = array();
-        $payment['client_id'] = $request->session()->get('client_id');
-        $errors = array();
+        $payments = $request->input();
 
-        if (!$request->has('payee_id')) {
-            $errors[] = ['message' => 'Pyee is required'];
-        } else {
-            $payment['payee_id'] = $request->input('payee_id');
+        if (empty($payments)){
+            return response()->json(NULL, 200);
         }
 
-        if (!$request->has('amount')) {
-            $errors[] = ['message' => 'Amount is required'];
-        } else {
-            $payment['amount'] = $request->input('amount');
+        foreach($payments as $payment){
+            try{
+                \DB::transaction(function () use ($payment, $request) {
+                    $result = \DB::update("UPDATE `account` SET `account`.`balance` =  `account`.`balance` - ? WHERE `account`.`account_no` = ? AND `account`.`client_id` = ?", [$payment['amount'], $payment['from_account_no'], $request->session()->get('client_id')]);
+    
+                    if (!$result) {
+                        throw new Execption();
+                    }
+    
+                    $result = \DB::insert("INSERT INTO `transaction` (`account_no`, date, `amount`) VALUES (?, ?, (-1)*?)", [$payment['from_account_no'], date('Y-m-d'), $payment['amount']]);
+    
+                    if (!$result) {
+                        throw new Execption();
+                    }
+    
+                    $result = \DB::insert("INSERT INTO `bill_payment` (`payee_id`, `amount`, `date`, `from_account_no`) VALUES (?, ?, ?, ?)", [$payment['payee_id'], $payment['amount'], date('Y-m-d'), $payment['from_account_no']]);
+    
+                    if (!$result) {
+                        throw new Exeception();
+                    }
+                });
+    
+                return response()->json(NULL,200);
+            } catch (Exception $e) {
+                return response()->json(['error' => 'Error while making the payment'], 400);
+            }
         }
 
-        if (!$request->has('from_account_no')) {
-            $errors[] = ['message' => 'From account number is required'];
-        } else {
-            $payment['from_account_no'] = $request->input('from_account_no');
-        }
+        return response()->json(NULL, 200);
 
-        try{
-            \DB::transaction(function () use ($payment) {
-                $result = \DB::update("UPDATE `account` SET `account`.`amount` - :amount WHERE `account`.`account_no` = :from_account_no AND `account`.`client_id` = :client_id", $payment);
-
-                if (!$result) {
-                    throw new Execption();
-                }
-
-                $result = \DB::insert("INSERT INTO `transaction` (`account_no`, `amount`) VALUES (:from_account_no, (-1)*:account)", $payment);
-
-                if (!$result) {
-                    throw new Execption();
-                }
-
-                $result = \DB::insert("INSERT INTO `bill_payment` (`payee_id`, `amount`, `from_account_no`) VALUES (:payee_id, :amount, :from_account_no)", $payment);
-
-                if (!$result) {
-                    throw new Exeception();
-                }
-            });
-
-            return response()->json(NULL,200);
-        } catch (Exception $e) {
-            return response()->json(['error' => 'Error while making the payment'], 400);
-        }
     }
 
     public function awaitingFunds(Request $request) {
-        return response()->json(\DB::select("SELECT * FROM `fund_transfer` WHERE `to_client_id` = ?", [$request->session()->get('client_id')]), 200);
+        return response()->json(\DB::select("SELECT `fund_transfer`.`date_sent`, `fund_transfer`.`fund_transfer_id`, `client`.`first_name`, `client`.`last_name`, `fund_transfer`.`amount` FROM `fund_transfer` JOIN `client` ON `client`.`client_id` = `fund_transfer`.`from_client_id` WHERE `fund_transfer`.`to_client_id` = ? AND `fund_transfer`.`date_received` IS NULL", [$request->session()->get('client_id')]), 200);
     }
 
     public function receiveFund(Request $request) {
         $transfer = array();
-        $transfer['from_client_id'] = $request->session()->get('client_id');
-        $transfer['date_received'] = date('Y-m-d');
-        $transfer = array_merge($transfer, $request->input());
+
+        if (!$request->has('to_account_no')){
+            return response()->json(['error' => 'Destination account number is required'], 400);
+        }
+
+        if (!$request->has('fund_transfer_id')) {
+            return response()->json([ 'error' => 'Fund transfer id is required'], 400);
+        }
+
+        $result = \DB::select("SELECT * FROM `fund_transfer` WHERE `fund_transfer`.`fund_transfer_id` = ? AND `fund_transfer`.`date_received` IS NULL", [$request->input('fund_transfer_id')]);
+
+        if (!$result) {
+            return response()->json(['error' => 'Fund transfer not found'], 400);
+        }
+        $result = $result[0];
+
+        $result->to_account_no = $request->input('to_account_no');
+        $result->date_received = date('Y-m-d');
+
         try{
-            \DB::transaction(function () use ($transfer) {
-                $result = \DB::update("UPDATE `account` SET `account`.`amount` - ? WHERE `account`.`account_no` = :to_account_no AND `account`.`to_client_id` = :to_client_id", $transfer);
+            \DB::transaction(function () use ($result) {
+                \DB::update("UPDATE `account` SET `account`.`balance` = `account`.`balance` + ? WHERE `account`.`account_no` = ? AND `account`.`client_id` = ?", [$result->amount, $result->to_account_no, $result->to_client_id]);
 
-                $result = \DB::insert("INSERT INTO `transaction` (`account_no`, `amount`) VALUES (:to_accont_no, :amount)", $transfer);
+                \DB::insert("INSERT INTO `transaction` (`account_no`, `date`, `amount`) VALUES (?, ?, ?)", [$result->to_account_no, $result->date_received, $result->amount]);
 
-                $result = \DB::update("UPDATE `fund_transfer` SET `date_received` = :date_received, `to_account_no` = :to_account_no WHERE `to_client_id`=:to_client_id AND `from_client_id` = :from_client_id", $transfer);
+                \DB::update("UPDATE `fund_transfer` SET `date_received` = ?, `to_account_no` = ? WHERE `fund_transfer_id` = ?", [$result->date_received, $result->to_account_no, $result->fund_transfer_id]);
             });
-
-            return response()->json(NULL,200);
         } catch (Exception $e) {
             return response()->json(['error' => 'Error while making the transfer'], 400);
         }
+
+        return response()->json(NULL,200);
     }
 
     public function sendFund(Request $request) {
@@ -418,7 +445,7 @@ class ClientController extends Controller
         if (!$to_client) {
             return response()->json(['error' => 'No client has the email or phone provided'], 400);
         } else {
-            $transfer['to_client_id'] = $to_client[0]['client_id'];
+            $transfer['to_client_id'] = $to_client[0]->client_id;
         }
 
         if(!$request->has('amount')) {
@@ -435,17 +462,16 @@ class ClientController extends Controller
 
         try{
             \DB::transaction(function () use ($transfer) {
-                $result = \DB::update("UPDATE `account` SET `account`.`amount` - ? WHERE `account`.`account_no` = ? AND `account`.`client_id` = ?", $transfer);
+                $result = \DB::update("UPDATE `account` SET `account`.`balance` = `account`.`balance` - ? WHERE `account`.`account_no` = ? AND `account`.`client_id` = ?", [$transfer['amount'], $transfer['from_account_no'], $transfer['from_client_id']]);
 
-                $result = \DB::insert("INSERT INTO `transaction` (`account_no`, `amount`) VALUES (:?, (-1)*:?)", $transfer);
+                $result = \DB::insert("INSERT INTO `transaction` (`account_no`, `date`, `amount`) VALUES (?, ?, (-1)*?)", [$transfer['from_account_no'], $transfer['date_sent'], $transfer['amount']]);
 
-                $result = \DB::insert("INSERT INTO `fund_transfer` (`from_client_id`, `to_client_id`, `date_sent`, `from_account_no`, `amount`) VALUES (:from_client_id, :to_client_id, :date_sent, :from_account_no, :amount)", $transfer);
+                $result = \DB::insert("INSERT INTO `fund_transfer` (`from_client_id`, `to_client_id`, `date_sent`, `from_account_no`, `amount`) VALUES (?, ?, ?, ?, ?)", [$transfer['from_client_id'], $transfer['to_client_id'], $transfer['date_sent'], $transfer['from_account_no'], $transfer['amount']]);
             });
-
-            return response()->json(NULL,200);
         } catch (Exception $e) {
             return response()->json(['error' => 'Error while making the transfer'], 400);
         }
+        return response()->json(NULL,200);
     }
 
     public function transferBetweenAccounts(Request $request) {
@@ -471,8 +497,26 @@ class ClientController extends Controller
         }
 
         $transfer['client_id'] = $request->session()->get('client_id');
+        try{
+            \DB::transaction(function () use ($transfer) {
+                $result = \DB::update("UPDATE `account` SET `account`.`balance` =  `account`.`balance` - ? WHERE `account`.`account_no` = ? AND `account`.`client_id` = ?", [$transfer['amount'], $transfer['from_account_no'], $transfer['client_id']]);
+                
+                $result = \DB::insert("INSERT INTO `transaction` (`account_no`, `date`, `amount`) VALUES (?, ?, ?)", [$transfer['from_account_no'], date('Y-m-d'), (-1)*$transfer['amount']]);
 
+                $result = \DB::update("UPDATE `account` SET `account`.`balance` =  `account`.`balance` + ? WHERE `account`.`account_no` = ? AND `account`.`client_id` = ?", [$transfer['amount'], $transfer['to_account_no'], $transfer['client_id']]);
+ 
+                $result = \DB::insert("INSERT INTO `transaction` (`account_no`, `date`, `amount`) VALUES (?, ?, ?)", [$transfer['to_account_no'], date('Y-m-d'), $transfer['amount']]);
+            });
 
+            return response()->json(NULL,200);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Error while making the transfer'], 400);
+        }
+    }
+
+    public function getServices() {
+        $result = \DB::select("SELECT * FROM service");
+        return response()->json($result, 200);
     }
 
     public function delete($request, $id){
