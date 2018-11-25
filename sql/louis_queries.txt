@@ -27,21 +27,45 @@ where province = 'example_province'
 
 
 
-//Calculation of the annual profits and losses of the Bank------------------
-
-
-//for one month
-select sum(amount) 
-from transaction
-where DATEDIFF(date1, date2)
-
-//interest due for current
-
-select sum(amount)*1.interest
-from transactions
-where date > datediff(end of billing date, '2 months')
-account = credit card;		
+///////////////////
+new stuff
 
 
 
-mul by customer amount + the 
+
+
+
+
+
+//calculates profit of branches in a year
+select SUM(rT.amount)*1.20*-1 from (select * from (select bby.account_no from (select ba.account_no from branch b NATURAL JOIN branchAcc ba) Z NATURAL JOIN account bby) ACC NATURAL JOIN transaction Tran) rT where rT.date >= (select DATE_SUB("2019-01-01", INTERVAL 12 MONTH));
+
+
+
+//get the interest rate
+select * from (select * from (select bby.account_no, bby.account_type_id from (select ba.account_no from branch b NATURAL JOIN branchAcc ba) Z NATURAL JOIN account bby) BRie NATURAL JOIN account_type AO) opop NATURAL JOIN interest_rate;
+
+
+//how much a bank branch profits in a year
+
+select branch_id, SUM(amount)*-percentage from (select * from(select account_no, percentage, branch_id from branch NATURAL JOIN branchAcc NATURAL JOIN account NATURAL JOIN account_type NATURAL JOIN interest_rate where interest_rate.account_type_id = account_type.account_type_id AND account_type.account_type_id != 1)ABE NATURAL JOIN transaction T)KIKI where date >= (select DATE_SUB("2019-01-01", INTERVAL 12 MONTH));
+
+
+//how much a bank branch loses in a year
+
+select branch_id, SUM(amount)*-percentage from (select * from(select account_no, percentage, branch_id, account_type_id from branch NATURAL JOIN branchAcc NATURAL JOIN account NATURAL JOIN account_type NATURAL JOIN interest_rate where interest_rate.account_type_id = account_type.account_type_id AND account_type.account_type_id != 1)ABE NATURAL JOIN transaction T)KIKI where date >= (select DATE_SUB("2019-01-01", INTERVAL 12 MONTH)) AND account_type_id = 2;
+
+
+//how much all banks in a city makes starting from jan 2019 and rewind it 
+
+select city, sum(amount)*-percentage from (select account_no, percentage, branch_id, account_type_id, city, transaction_no, date, amount from address NATURAL JOIN branch NATURAL JOIN branchAcc NATURAL JOIN account NATURAL JOIN account_type NATURAL JOIN interest_rate NATURAL JOIN transaction)CT where percentage != 0 AND CT.date >= (select DATE_SUB("2019-01-01", INTERVAL 12 MONTH));
+
+//how much they lose
+
+select city, sum(amount)*-percentage from (select account_no, percentage, branch_id, account_type_id, city, transaction_no, date, amount from address NATURAL JOIN branch NATURAL JOIN branchAcc NATURAL JOIN account NATURAL JOIN account_type NATURAL JOIN interest_rate NATURAL JOIN transaction)CT where percentage != 0 AND CT.date >= (select DATE_SUB("2019-01-01", INTERVAL 12 MONTH)) AND CT.account_type_id = 2;
+
+
+//moneys for all 
+ select sum(amount)*-.2 from account NATURAL JOIN transaction where account_type_id = 3 or account_type_id=2;
+
+it's wong cuz I don't use the percentage
