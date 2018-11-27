@@ -25,6 +25,12 @@ export default {
   clientGetChargePlans(accountOptionId) {
     return Api().get('/account/option/' + accountOptionId + '/chargeplans');
   },
+  clietGetCategories() {
+    return Api().get('/client/categories')
+  },
+  clientDeleteAccount(clientDeleteAccount){
+    return Api().get('/client/account/' + clientDeleteAccount)
+  },
   clientAddAccount(payload) {
     return Api().post('/client/account', payload);
   },

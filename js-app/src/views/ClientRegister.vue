@@ -41,7 +41,7 @@
                                 <v-text-field prepend-icon="person" name="last_name" label="Last Name" type="text" v-model="last_name" required></v-text-field>
                                 <v-text-field prepend-icon="email" name="email" label="Email" type="email" v-model="email" required></v-text-field>
                                 <v-select :items="GENDERS" label="Gender" v-model="gender" required></v-select>
-                                <v-select :items="CLIENT_TYPE" label="Client Type" v-model="client_category_id" required></v-select>
+                                <v-select :items="client_categories" :loading="!client_categories" label="Client Type" :item-text="item => item.name.toLowerCase().split(' ').map((s) => s.charAt(0).toUpperCase() + s.substring(1)).join(' ')" item-value="client_category_id" v-model="client_category_id" required></v-select>
                                 <v-text-field prepend-icon="phone" name="phone_number" label="Phone Number" type="number" minlength="8" maxlength="8" v-model="phone_number" required></v-text-field>
                                     <v-menu
                                         ref="menu"
@@ -106,13 +106,18 @@
 
 <script>
 import AuthService from '@/services/AuthService.js'
+import ClientService from '@/services/ClientService.js'
+
 export default {
     name: 'client-register',
+    created() {
+        this.fetchClientCategories()
+    },
     data: ()=>{
         return {
             GENDERS: [ 'M', 'F', 'U' ],
             PROVINCES: [ 'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT' ],
-            CLIENT_TYPE: [ { text: 'Personal', value: 1 } ],
+            client_categories: null,
             first_name: null,
             last_name: null,
             email: null,
@@ -133,6 +138,17 @@ export default {
         }
     },
     methods: {
+        fetchClientCategories (){
+            ClientService.clietGetCategories().then(
+                (response) => {
+                    this.client_categories = response.data
+                }
+            ).catch(
+                (error) => {
+                    console.error(error)
+                }
+            )
+        },
         register() {
             var payload = {
                 first_name: this.first_name,
@@ -156,6 +172,7 @@ export default {
                 (response) => {
                     this.sucess = true;
                     this.$store.dispatch('login');
+                    this.$router.push({ name: 'client-accounts' })
                 }
             ).catch(
                 (error) => {

@@ -80,7 +80,7 @@
                                         </spasn>
                                     </v-tooltip>
                                     <v-tooltip right>
-                                        <v-btn slot="activator" icon flat small @click="deleteItem(props.item)">
+                                        <v-btn slot="activator" icon flat small @click="deleteAccount(props.item.account_no)">
                                             <v-icon
                                                 small
                                             >
@@ -237,6 +237,19 @@ export default {
                     console.error(error)
                 }
             )
+        },
+        deleteAccount(account_no) {
+            if(confirm("Are you sure you want to delete account # " + account_no)) {
+                ClientService.clientDeleteAccount(account_no).then(
+                    (response) => {
+                        this.$store.dispatch('fetchAccounts')
+                    }
+                ).catch(
+                    (error) => {
+                        console.error(error)
+                    }
+                )
+            }
         },
         save(){
             ClientService.clientAddAccount(this.new_account).then(
